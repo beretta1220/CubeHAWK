@@ -1,0 +1,113 @@
+#include <Wire.h>
+#include <BMI088.h>
+#include <RM3100.h>
+
+#define IMU_ADDR 0x19
+#define MAG_ADDR 0x20
+
+BMI088 imu;
+RM3100 mag;
+
+float Kp = 0.5; // Proportional gain
+float Ki = 0.1; // Integral gain
+float Kd = 0.2; // Derivative gain
+float integral[3] = {0.0, 0.0, 0.0};
+float prev_error[3] = {0.0, 0.0, 0.0};
+float setpoint[3] = {0.0, 0.0, 0.0};
+float error[3] = {0.0, 0.0, 0.0};
+float output[3] = {0.0, 0.0, 0.0};
+float max_output = 1.0; // Maximum output value
+float min_output = -1.0; // Minimum output value
+
+void setup() {
+  Wire.begin();
+  imu.begin(IMU_ADDR);
+  mag.begin(MAG_ADDR);
+}
+
+void loop() {
+  // Read raw sensor data
+  imu.readAccelerometer();
+  imu.readGyroscope();
+  mag.readMagnetometer();
+
+  // Convert sensor data to SI units
+  float ax = imu.accelerometerData.x * 9.81;
+  float ay = imu.accelerometerData.y * 9.81;
+  float az = imu.accelerometerData.z * 9.81;
+  float gx = imu.gyroscopeData.x * PI / 180;
+  float gy = imu.gyroscopeData.y * PI / 180;
+  float gz = imu.gyroscopeData.z * PI / 180;
+  float mx = mag.magnetometerData.x;
+  float my = mag.magnetometerData.y;
+  float mz = mag.magnetometerData.z;
+
+  // Calculate offset error
+  float error_x = mx - setpoint[0];
+  float error_y = my - setpoint[1];
+  float error_z = mz - setpoint[2];
+
+  // Calculate PID output for X axis
+  integral[0] += error_x;
+  float derivative = error_x - prev_error[0];
+  output[0] = Kp * error_x + Ki * integral[0] + Kd * derivative;
+  prev_error[0] = error_x;
+
+  // Calculate PID output for Y axis
+  integral[1] += error_y;
+  derivative = error_y - prev_error[1];
+  output[1] = Kp * error_y + Ki * integral[1] + Kd * derivative;
+  prev_error[1] = error_y;
+
+  // Calculate PID output for Z axis
+  integral[2] += error_z;
+  derivative = error_z - prev_error[2];
+  output[2] = Kp * error_z + Ki * integral[2] + Kd * derivative;
+  prev_error[2] = error_z;
+
+  // Limit output values to maximum and minimum values
+  output[0] = max(min(output[0], max_output), min_output);
+  output[1] = max(min(output[1], max_output), min_output);
+  output[2] = max(min(output[2], max_output), min_output);
+
+  // Apply output values to magnetorquers
+  // Positive output value will energize the magnetorquer in one direction, while a negative output value will energize it in the opposite direction.
+
+// X-axis magnetorquer
+if (output[0] > 0.0) {
+// Positive output: Energize magnetorquer in +X direction
+// Set current or voltage to drive magnetorquer
+} else if (output[0] < 0.0) {
+// Negative output: Energize magnetorquer in -X direction
+// Set current or voltage to drive magnetorquer
+} else {
+// Zero output: De-energize magnetorquer
+// Set current or voltage to zero
+}
+
+// Y-axis magnetorquer
+if (output[1] > 0.0) {
+// Positive output: Energize magnetorquer in +Y direction
+// Set current or voltage to drive magnetorquer
+} else if (output[1] < 0.0) {
+// Negative output: Energize magnetorquer in -Y direction
+// Set current or voltage to drive magnetorquer
+} else {
+// Zero output: De-energize magnetorquer
+// Set current or voltage to zero
+}
+
+// Z-axis magnetorquer
+if (output[2] > 0.0) {
+// Positive output: Energize magnetorquer in +Z direction
+// Set current or voltage to drive magnetorquer
+} else if (output[2] < 0.0) {
+// Negative output: Energize magnetorquer in -Z direction
+// Set current or voltage to drive magnetorquer
+} else {
+// Zero output: De-energize magnetorquer
+// Set current or voltage to zero
+}
+
+delay(10); // Adjust delay as needed
+}
